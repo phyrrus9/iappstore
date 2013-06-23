@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4A494EE017773F920061E152 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4A494EDF17773F920061E152 /* main.cpp */; };
+		4A494EE9177769ED0061E152 /* libcurl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 4A494EE8177769ED0061E152 /* libcurl.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +26,7 @@
 /* Begin PBXFileReference section */
 		4A494EDC17773F920061E152 /* iappstore */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = iappstore; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A494EDF17773F920061E152 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		4A494EE8177769ED0061E152 /* libcurl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcurl.dylib; path = usr/lib/libcurl.dylib; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +34,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4A494EE9177769ED0061E152 /* libcurl.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -41,6 +44,7 @@
 		4A494ED317773F920061E152 = {
 			isa = PBXGroup;
 			children = (
+				4A494EE8177769ED0061E152 /* libcurl.dylib */,
 				4A494EDE17773F920061E152 /* iappstore */,
 				4A494EDD17773F920061E152 /* Products */,
 			);

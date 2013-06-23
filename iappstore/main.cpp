@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <curl/curl.h>
 
 using namespace std;
 
@@ -25,6 +26,7 @@ typedef struct app_s
     char developer[30];
     char description[150];
     int version;
+    bool setup;
     app_s *next;
     app_s *parent;
 } app;
@@ -32,13 +34,43 @@ typedef struct app_s
 app *first = new app;
 app *current = first;
 
+void curl_download(char * url, char * out)
+{
+    CURL *curl;
+    CURLcode res;
+    FILE *outfile;
+    curl = curl_easy_init();
+    if(curl)
+    {
+        outfile = fopen(out, "w");
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        /* example.com is redirected, so we tell libcurl to follow redirection */
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_FILE, outfile);
+        
+        /* Perform the request, res will get the return code */
+        res = curl_easy_perform(curl);
+        /* Check for errors */
+        if(res != CURLE_OK)
+            fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                    curl_easy_strerror(res));
+        /* always cleanup */
+        curl_easy_cleanup(curl);
+        fflush(outfile);
+        fclose(outfile);
+    }
+}
+
 void downloadlist()
 {
     srand((unsigned int)time(0));
     sprintf(list_location, "%s%d", "/tmp/iapp-", rand());
     char command[200];
-    sprintf(command, "git clone -q http://github.com/phyrrus9/apps %s", list_location);
+    sprintf(command, "mkdir -p %s", list_location);
     system(command);
+    sprintf(command, "%s/list.txt", list_location);
+    //system(command);
+    curl_download("http://iappstore.co.nf/list.txt", command);
     //execle("git", "clone", "http://github.com/phyrrus9/apps", list_location);
 }
 
@@ -78,12 +110,17 @@ void parselist()
 void printlist(app * start)
 {
     app *test = start;
+    if (!start)
+    {
+        cout << "Nothing to see here" << endl;
+        return;
+    }
     while (test != NULL)
     {
-        printf("Name: %s\n"
-               "Location: %s\n"
-               "Developer: %s\n"
-               "Description: %s\n",
+        printf("\nName: %s\n"
+               "-->Location: %s\n"
+               "-->Developer: %s\n"
+               "-->Description: %s\n",
                test->appname,
                test->location,
                test->developer,
@@ -92,7 +129,7 @@ void printlist(app * start)
     }
 }
 
-app * search(char * str, bool nameonly = false)
+app * search(const char * str, bool nameonly = false)
 {
     app * ret = new app;
     app * rfirst = ret;
@@ -105,12 +142,14 @@ app * search(char * str, bool nameonly = false)
             if (strcmp(list->appname, str) == 0)
             {
                 good = true;
+                ret->setup = true;
             }
         }
         else
         {
             if (strstr(list->description, str) != NULL || strstr(list->appname, str) != NULL || strstr(list->developer, str) != NULL)
             {
+                ret->setup = true;
                 good = true;
             }
         }
@@ -133,27 +172,80 @@ app * search(char * str, bool nameonly = false)
         else
             list = list->next;
     }
-    ret = rfirst;
+    if (!ret->setup)
+    {
+        if (ret == rfirst)
+        {
+            ret = NULL;
+        }
+        else
+        {
+            ret->parent->next = NULL;
+            ret = rfirst;
+        }
+    }
     return ret;
 }
 
-void install(char * appname, char * location = (char *)"~/Desktop/iappstore")
+void install(app * applist, char * location = (char *)"~/Desktop/iappstore")
 {
     char command[100];
+    char filename[50];
     sprintf(command, "mkdir -p %s", location);
     system(command);
-    app *applocation = search(appname, true);
-    if (!applocation)
-        cout << "Can not find app, the printer is on fire" << endl;
-    sprintf(command, "cp %s/%s %s/", list_location, applocation->location, location);
-    system(command);
+    while (applist)
+    {
+        sprintf(filename, "%s.ipa", applist->appname);
+        sprintf(command, "cp %s/%s %s/", list_location, filename, location);
+        system(command);
+        applist = applist->next;
+    }
+}
+
+app * fetch_packages(app *list)
+{
+    char URL[70];
+    char FNM[40];
+    app *a = list;
+    while (a)
+    {
+        sprintf(FNM, "%s/%s.ipa", list_location, a->appname);
+        sprintf(URL, "%s", a->location);
+        curl_download(URL, FNM);
+        a = a->next;
+    }
+    a = list;
+    return a; //returns original list
 }
 
 int main(int argc, const char * argv[])
 {
-    downloadlist();
-    parselist();
-    printlist(first);
-    install((char *)"magicount");
+    if (argc < 2)
+    {
+        cout << "Error, must specify at least one arg" << endl;
+        return -1;
+    }
+   // if (strcmp(argv[1], "update") == 0)
+    {
+        downloadlist();
+        parselist();
+    }
+    if (strcmp(argv[1], "search") == 0)
+    {
+        for (int i = 2; i < argc; i++)
+        {
+            printlist(search(argv[i]));
+        }
+    }
+    else if (strcmp(argv[1], "install") == 0)
+    {
+        for (int i = 2; i < argc; i++)
+        {
+            cout << "Installing " << argv[i] << endl;
+            install(fetch_packages(search(argv[i])));
+        }
+    }
+    else
+        cout << "idk what to do..." << endl;
 }
 
